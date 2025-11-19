@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Essential for fully responsive mobile design -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glass Weather Forecast</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Glassmorphism effect and font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Vibrant background for the glass to stand out */
+            background: radial-gradient(circle at 10% 20%, rgba(135, 206, 235, 0.34) 0%, rgba(30, 64, 175, 1) 100%); 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            overflow: hidden; /* Hide potential scrollbar from centering */
+        }
+
+        /* The core Glassmorphism container style */
+        .glass-card {
+            background: rgba(90, 85, 153, 0.466); /* Semi-transparent white */
+            backdrop-filter: blur(15px); /* The frosted glass effect */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Thin light border */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); /* Stronger shadow */
+        }
+        
+        /* Loading spinner animation fix */
+        #loading-spinner {
+            border-top-color: transparent;
+        }
+
+        /* Style for the search button (bubble effect) */
+        #search-btn {
+            transition: all 0.2s ease-in-out;
+            background: linear-gradient(45deg, #f0f9ff, #38bdf8);
+            color: #4b7941;
+        }
+
+        #search-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 5px rgba(56, 189, 248, 0.8);
+        }
+        
+        /* Make all text white for contrast */
+        .text-glass {
+            color: rgb(255, 255, 255);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Forecast card specific styling */
+        .forecast-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- MAIN APP CONTAINER -->
+    <!-- Applying Glassmorphism class -->
+    <div id="weather-app" class="w-full max-w-sm glass-card rounded-[20px] p-6 transition-all duration-300 mx-auto">
+        
+        <!-- Search Input Section -->
+        <div class="flex space-x-3 mb-6">
+            <input 
+                type="text" 
+                id="city-input" 
+                placeholder="Search City..." 
+                class="flex-grow p-3 bg-white/20 text-white placeholder-white/70 border border-white/30 rounded-xl focus:ring-sky-200 focus:border-sky-200 transition duration-150 shadow-md"
+                aria-label="City Name Input"
+            >
+            <button 
+                id="search-btn" 
+                class="p-3 font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2 focus:ring-offset-blue-600 shadow-lg"
+                aria-label="Search Button"
+            >
+                <!-- Search Icon (using inline SVG for stability) -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
+        </div>
+
+        <!-- Dynamic Content Area -->
+        <div id="weather-content" class="text-center text-glass">
+            
+            <!-- Loading State/Initial Message -->
+            <div id="initial-state" class="p-8">
+                <p class="text-white/80 text-lg">Enter a city name to see the magic!</p>
+                <!-- Loading Spinner -->
+                <div id="loading-spinner" class="w-12 h-12 border-4 border-white rounded-full mx-auto mt-4 animate-spin hidden"></div>
+            </div>
+
+            <!-- Weather Details (Hidden until data is fetched) -->
+            <div id="weather-display" class="hidden">
+                
+                <!-- City, Icon, and Description -->
+                <div class="flex flex-col items-center mb-4">
+                    <h2 id="city-name" class="text-4xl font-extrabold mb-1"></h2>
+                    <!-- Icon Placeholder -->
+                    <img id="weather-icon" src="" alt="Weather Icon" class="w-24 h-24 filter drop-shadow-xl -mt-2">
+                    <p id="description" class="text-xl font-medium text-white/90 capitalize -mt-4"></p>
+                </div>
+
+                <!-- Temperature and Core Stats -->
+                <div class="mb-6">
+                    <p id="temperature" class="text-7xl font-extrabold mb-2 leading-none"></p>
+                    <div class="flex justify-center space-x-6 text-sm text-white/70">
+                        <p id="min-max-temp">Min: --°C | Max: --°C</p>
+                    </div>
+                </div>
+
+                <!-- Secondary Stats Grid (Frosted Cards) -->
+                <div class="grid grid-cols-2 gap-4 text-left p-4 rounded-xl">
+                    
+                    <!-- Humidity Card -->
+                    <div class="p-3 glass-card rounded-xl">
+                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Humidity</p>
+                        <p id="humidity" class="text-xl font-bold">--%</p>
+                    </div>
+
+                    <!-- Wind Speed Card -->
+                    <div class="p-3 glass-card rounded-xl">
+                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Wind Speed</p>
+                        <p id="wind-speed" class="text-xl font-bold">-- m/s</p>
+                    </div>
+                    
+                    <!-- Pressure Card -->
+                    <div class="p-3 glass-card rounded-xl">
+                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Pressure</p>
+                        <p id="pressure" class="text-xl font-bold">-- hPa</p>
+                    </div>
+                    
+                    <!-- Time/Date Card (Replaced Sunrise with a more general 'Time') -->
+                    <div class="p-3 glass-card rounded-xl">
+                        <p class="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Local Time</p>
+                        <p id="local-time" class="text-xl font-bold">--:--</p>
+                    </div>
+
+                </div>
+
+                <!-- New LLM Recommendation Section -->
+                <div class="mt-6 pt-4 border-t border-white/30 text-center">
+                    <div id="forecast-container" class="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs"></div>
+                    <button id="recommendation-btn" 
+                        class="w-full p-3 font-bold rounded-xl text-sm bg-purple-400 hover:bg-purple-300 text-purple-900 transition duration-150 shadow-lg disabled:opacity-50" 
+                        disabled 
+                        aria-label="Get weather related recommendation and vibe">
+                        ✨ Get Daily Vibe & Reco
+                    </button>
+                    <p id="recommendation-output" class="text-sm mt-3 italic text-white/80 min-h-[30px] p-2 bg-black/10 rounded-lg">Tap above for a personalized recommendation!</p>
+                </div>
+
+                <!-- 5-DAY FORECAST SECTION (UPDATED) -->
+                <div class="mt-8 pt-4 border-t border-white/30 text-center">
+                    <h3 class="text-xl font-bold mb-4 text-white">5-Day Forecast</h3>
+                    <!-- NEW FIX: Used flexbox, flex-nowrap, and overflow-x-auto to ensure horizontal scrolling on all devices -->
+                    <div id="forecast-container" class="flex flex-nowrap overflow-x-auto gap-3 text-xs p-1"> 
+                        <!-- Daily Forecast Cards will be injected here by JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- END FORECAST SECTION -->
+
+            </div>
+            
+            <!-- Error Message (Hidden until an error occurs) -->
+            <div id="error-message" class="hidden bg-red-600/30 text-white/90 border border-red-400 p-4 rounded-xl mt-4">
+                <p id="error-text" class="font-medium"></p>
+            </div>
+
+        </div>
+        
+        <!-- === Your Name/Branding Footer === -->
+        <div class="text-xs text-center text-white/50 mt-4 pt-3 border-t border-white/10">
+                    @𝐷ℎ𝑎𝑛𝑎𝑛𝑗𝑎𝑦
+        </div>
+        <!-- =================================== -->
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+           
+            // --- ⚠️ CONFIGURATION: REPLACE THIS KEY ⚠️ ---
+            const apiKey = "6425f862d32a5a2c951eec9cb300fbcb"; 
+            
+            // --- Gemini API Configuration (No need to change this key) ---
+            const geminiApiKey = ""; // This will be provided by the runtime environment
+            const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${geminiApiKey}`;
+
+            // --- UI Element References ---
+            const cityInput = document.getElementById('city-input');
+            const searchBtn = document.getElementById('search-btn');
+            const weatherDisplay = document.getElementById('weather-display');
+            const initialState = document.getElementById('initial-state');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const errorElement = document.getElementById('error-message');
+            const errorText = document.getElementById('error-text');
+            
+            // Core Display Elements
+            const cityNameEl = document.getElementById('city-name');
+            const tempEl = document.getElementById('temperature');
+            const iconEl = document.getElementById('weather-icon');
+            const descEl = document.getElementById('description');
+            const minMaxTempEl = document.getElementById('min-max-temp');
+            
+            // Secondary Stats
+            const humidityEl = document.getElementById('humidity');
+            const windEl = document.getElementById('wind-speed');
+            const pressureEl = document.getElementById('pressure');
+            const localTimeEl = document.getElementById('local-time'); // Updated element ID
+            
+            // Forecast Container
+            const forecastContainer = document.getElementById('forecast-container');
+            
+            // New LLM References
+            const recommendationBtn = document.getElementById('recommendation-btn');
+            const recommendationOutput = document.getElementById('recommendation-output');
+            
+            // State to hold current weather context for LLM
+            let currentWeatherContext = null;
+
+
+            // --- Utility Functions ---
+
+            function showLoader(isLoading) {
+                if (isLoading) {
+                    weatherDisplay.classList.add('hidden');
+                    errorElement.classList.add('hidden');
+                    initialState.classList.remove('hidden');
+                    loadingSpinner.classList.remove('hidden');
+                } else {
+                    loadingSpinner.classList.add('hidden');
+                }
+            }
+
+            function showError(message) {
+                // Hides weather, shows error
+                weatherDisplay.classList.add('hidden');
+                initialState.classList.remove('hidden');
+                loadingSpinner.classList.add('hidden');
+                errorElement.classList.remove('hidden');
+                errorText.textContent = message;
+                // Clear input value for user to try again
+                cityInput.value = '';
+                cityInput.focus();
+            }
+
+            // Converts timestamp (UTC) + timezone offset (seconds) to a formatted local time string
+            function formatTime(timestamp) {
+                const date = new Date(timestamp * 1000);
+                // Format the time as HH:MM
+                return date.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: false 
+                });
+            }
+            
+            // Formats timestamp to get the day of the week
+            function formatDay(timestamp) {
+                const date = new Date(timestamp * 1000);
+                return date.toLocaleDateString('en-US', { weekday: 'short' });
+            }
+
+
+            // --- Forecast Rendering Functions ---
+            
+            // Generates the HTML for a single forecast card
+            function createForecastCard(day, iconCode, minTemp, maxTemp, hasRain) {
+                const rainIndicator = hasRain ? 
+                    '<span class="text-blue-300 text-sm font-semibold"> (Rain)</span>' : 
+                    '<span class="text-white/60 text-sm font-semibold"> (Dry)</span>';
+                    
+                return `
+                    <div class="p-3 forecast-card rounded-xl flex flex-col items-center shadow-lg transition duration-200 hover:scale-[1.03]">
+                        <p class="text-sm font-semibold mb-1 text-white">${day}</p>
+                        <img src="https://openweathermap.org/img/wn/${iconCode}@2x.png" alt="Weather Icon" class="w-12 h-12 filter drop-shadow-md -my-1">
+                        <p class="text-xs font-light text-white/70">${rainIndicator}</p>
+                        <p class="text-base font-bold mt-1">${Math.round(minTemp)}° / ${Math.round(maxTemp)}°</p>
+                    </div>
+                `;
+            }
+            
+            // Processes the forecast list to extract daily summaries
+            function processForecastData(forecastList) {
+                const dailyData = {};
+                
+                // Group forecast entries by day (YYYY-MM-DD)
+                forecastList.forEach(item => {
+                    const date = new Date(item.dt * 1000).toISOString().split('T')[0];
+                    if (!dailyData[date]) {
+                        dailyData[date] = {
+                            temps: [],
+                            icons: [],
+                            rain: false,
+                            timestamp: item.dt
+                        };
+                    }
+                    dailyData[date].temps.push(item.main.temp_min, item.main.temp_max);
+                    dailyData[date].icons.push(item.weather[0].icon);
+                    // Check for rain or drizzle conditions
+                    if (item.weather[0].main === 'Rain' || item.weather[0].main === 'Drizzle' || item.rain) {
+                        dailyData[date].rain = true;
+                    }
+                });
+                
+                // Convert grouped data into a simplified array of daily summaries
+                return Object.keys(dailyData).map(dateKey => {
+                    const day = dailyData[dateKey];
+                    const minTemp = Math.min(...day.temps);
+                    const maxTemp = Math.max(...day.temps);
+                    
+                    // Simple logic to select a representative icon (e.g., the first icon of the day, 
+                    // or a more common one, but for simplicity, we take the one closest to midday).
+                    // Since OpenWeatherMap automatically prioritizes icons, we'll just take the most frequent.
+                    // For simplicity, we just use the icon of the item closest to 12:00 PM for the day.
+                    const noonEntry = forecastList.find(item => 
+                        new Date(item.dt * 1000).toISOString().startsWith(dateKey) && 
+                        new Date(item.dt * 1000).getHours() >= 12 && 
+                        new Date(item.dt * 1000).getHours() <= 15
+                    ) || forecastList.find(item => new Date(item.dt * 1000).toISOString().startsWith(dateKey));
+                    
+                    const representativeIcon = noonEntry ? noonEntry.weather[0].icon : day.icons[0];
+                    
+                    return {
+                        date: day.timestamp,
+                        minTemp: minTemp,
+                        maxTemp: maxTemp,
+                        icon: representativeIcon,
+                        hasRain: day.rain
+                    };
+                });
+            }
+
+            function displayForecast(dailySummaries) {
+                // Get today's date string
+                const todayDateString = new Date().toISOString().split('T')[0];
+                
+                // Filter out today's data to show the NEXT 5 days (Change is here)
+                const nextForecastDays = dailySummaries.filter(day => {
+                    const forecastDateString = new Date(day.date * 1000).toISOString().split('T')[0];
+                    return forecastDateString !== todayDateString;
+                }).slice(0, 5); // <--- **SLICED FOR 5 DAYS NOW**
+                
+                // Clear previous forecast
+                forecastContainer.innerHTML = '';
+                
+                nextForecastDays.forEach(daySummary => {
+                    const dayName = formatDay(daySummary.date);
+                    const cardHtml = createForecastCard(
+                        dayName, 
+                        daySummary.icon, 
+                        daySummary.minTemp, 
+                        daySummary.maxTemp,
+                        daySummary.hasRain
+                    );
+                    forecastContainer.innerHTML += cardHtml;
+                });
+            }
+
+            // --- Main Weather Functions (Updated to use forecast data) ---
+
+            function displayCurrentWeather(data) {
+                const current = data.list[0]; // Use the first entry for current weather
+                const timezoneOffsetSeconds = data.city.timezone;
+                
+                const tempCelsius = Math.round(current.main.temp);
+                const minTemp = Math.round(current.main.temp_min);
+                const maxTemp = Math.round(current.main.temp_max);
+                const description = current.weather[0].description;
+                const weatherIconCode = current.weather[0].icon;
+                
+                // Calculate current local time using the city's timezone offset
+                const utcDate = new Date();
+                const localTimestamp = utcDate.getTime() + (timezoneOffsetSeconds * 1000);
+                const localDate = new Date(localTimestamp);
+                
+                // Format the local time
+                const formattedTime = localDate.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: false
+                });
+
+                // Update visibility
+                weatherDisplay.classList.remove('hidden');
+                initialState.classList.add('hidden');
+                errorElement.classList.add('hidden');
+
+                // Update Core Details
+                cityNameEl.textContent = `${data.city.name}, ${data.city.country}`;
+                tempEl.textContent = `${tempCelsius}°C`;
+                descEl.textContent = description;
+                iconEl.src = `https://openweathermap.org/img/wn/${weatherIconCode}@2x.png`;
+                iconEl.alt = description;
+                minMaxTempEl.textContent = `Min: ${minTemp}°C | Max: ${maxTemp}°C`;
+
+                // Update Secondary Stats
+                humidityEl.textContent = `${current.main.humidity}%`;
+                windEl.textContent = `${current.wind.speed.toFixed(1)} m/s`;
+                pressureEl.textContent = `${current.main.pressure} hPa`;
+                localTimeEl.textContent = formattedTime; // Display local time
+                
+                // Set context for LLM and enable button
+                currentWeatherContext = {
+                    city: data.city.name,
+                    temp: tempCelsius,
+                    description: description
+                };
+                recommendationBtn.disabled = false;
+                recommendationOutput.textContent = "Tap above for a personalized recommendation!"; // Reset recommendation output
+                recommendationOutput.classList.remove('text-red-400');
+            }
+
+            async function fetchWeatherData(city) {
+                // 1. Check for API Key
+                if (apiKey === "" || !apiKey.trim()) {
+                    showError("Please replace 'YOUR_OPENWEATHERMAP_API_KEY' with your actual key in the script.");
+                    return;
+                }
+
+                // 2. Input Validation
+                const trimmedCity = city.trim();
+                if (!trimmedCity) {
+                    showError("Please enter a city name.");
+                    return;
+                }
+
+                showLoader(true); // Show loading spinner
+                
+                // OpenWeatherMap 5-day / 3-hour Forecast API URL
+                const apiUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${trimmedCity}&units=metric&appid=${apiKey}`;
+
+                try {
+                    const response = await fetch(apiUrl);
+
+                    if (!response.ok) {
+                        if (response.status === 404) {
+                            throw new Error('City not found. Please check the spelling.');
+                        }
+                        // Handle other HTTP errors
+                        throw new Error(`Error fetching data: HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    
+                    // Check for invalid or missing core data
+                    if (!data || !data.list || data.list.length === 0) {
+                         throw new Error('Received incomplete weather data from the API.');
+                    }
+                    
+                    // Display current weather summary
+                    displayCurrentWeather(data);
+                    
+                    // Process and display the 5-day forecast
+                    const dailySummaries = processForecastData(data.list);
+                    displayForecast(dailySummaries);
+                    
+                    cityInput.value = ''; // Clear input on successful search
+
+                } catch (error) {
+                    // Show specific error to the user
+                    showError(error.message || "An unexpected error occurred while fetching the weather.");
+
+                } finally {
+                    showLoader(false); // Hide loading spinner
+                }
+            }
+            
+            // --- Gemini LLM Function (Unchanged) ---
+
+            async function fetchRecommendation() {
+                if (!currentWeatherContext) return;
+
+                recommendationBtn.disabled = true;
+                recommendationOutput.textContent = "Generating personalized vibe...";
+                recommendationOutput.classList.remove('text-red-400');
+                
+                const { city, temp, description } = currentWeatherContext;
+
+                const systemPrompt = "You are a friendly, witty, and concise AI weather consultant. Your task is to provide a single, short paragraph (under 40 words) that captures the 'vibe' of the current weather and suggests one relevant activity or outfit item. Use a modern, light-hearted tone and be encouraging.";
+                const userQuery = `The current weather in ${city} is ${temp}°C with ${description}. What is the daily vibe and what should I wear or do?`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                let attempt = 0;
+                const maxAttempts = 3;
+                let delay = 1000;
+                
+                while (attempt < maxAttempts) {
+                    try {
+                        const response = await fetch(geminiApiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        if (text) {
+                            recommendationOutput.textContent = text.trim();
+                            return; // Success, exit function
+                        } else {
+                            throw new Error('No valid content received from API.');
+                        }
+                    } catch (error) {
+                        // console.error(`Attempt ${attempt + 1} failed:`, error);
+                        attempt++;
+                        if (attempt < maxAttempts) {
+                            // Exponential backoff logic
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; // Double the delay
+                        } else {
+                            // Final failure
+                            recommendationOutput.textContent = "Sorry, I couldn't generate a recommendation right now. Try again later.";
+                            recommendationOutput.classList.add('text-red-400');
+                        }
+                    }
+                }
+                recommendationBtn.disabled = false; // Re-enable button on failure
+            }
+
+
+            // --- Event Listeners ---
+
+            // Handle search button click
+            searchBtn.addEventListener('click', () => {
+                const city = cityInput.value;
+                fetchWeatherData(city); // Changed function name
+            });
+
+            // Handle Enter key press in the input field
+            cityInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Prevent default browser behavior
+                    searchBtn.click();
+                }
+            });
+            
+            // New: Handle recommendation button click
+            recommendationBtn.addEventListener('click', fetchRecommendation);
+
+
+            // Set focus on load for better usability
+            cityInput.focus();
+        });
+    </script>
+</body>
+</html>
